@@ -469,6 +469,14 @@
     transform: translateY(-1px);
 }
 
+.incident-close-requested td {
+    background: rgba(255, 0, 0, 0.06);
+}
+
+.incident-close-requested:hover td {
+    background: rgba(255, 0, 0, 0.10);
+}
+
 
 
 

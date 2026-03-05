@@ -24,8 +24,7 @@ const STATUS_OPTIONS_INCIDENT: IncidentStatus[] = [
     IncidentStatus.New,
     IncidentStatus.Assign,
     IncidentStatus.InProgress,
-    IncidentStatus.Resolved,
-    IncidentStatus.Closed,
+    IncidentStatus.Resolved
 ];
 const PRIORITY_OPTIONS_INCIDENT: IncidentPriority[] = [
     IncidentPriority.P1,

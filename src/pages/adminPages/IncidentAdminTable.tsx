@@ -3,8 +3,8 @@ import { useLocation } from "react-router-dom";
 import {type Incident, IncidentPriority, IncidentStatus} from "../../types/incidentTypes.ts";
 import {useAppDispatch, useAppSelector} from "../../state/hooks.ts";
 import {
+    closeIncidentThunk,
     getIncidentsThunk,
-    updateIncidentAssignedThunk,
     updateIncidentStatusThunk
 } from "../../state/slices/incidentSlice.ts";
 import {usePolling} from "../../hooks/usePolling.ts";
@@ -12,6 +12,7 @@ import type {ColumnDef} from "@tanstack/react-table";
 import TableTanStack from "../../components/TableTanStack.tsx";
 import {PollingInline} from "../../components/PollingInline.tsx";
 import {TableFilters} from "../../components/TableFilters.tsx";
+import "../../styles/tables.css";
 
 const STATUS_OPTIONS_INCIDENT: IncidentStatus[] = [
     IncidentStatus.New,
@@ -36,6 +37,9 @@ export const IncidentAdminTable: React.FC = () => {
         incidentsSyncing,
         incidentsLastSyncAt,
         incidentsNewCount,
+
+        requestCloseByIncidentId,
+        isRequestClosed,
     } = useAppSelector((s) => s.incident);
 
     const dispatch = useAppDispatch();
@@ -63,11 +67,6 @@ export const IncidentAdminTable: React.FC = () => {
             const current = incident.status;
             if (nextStatus === current) return;
 
-            if (nextStatus === IncidentStatus.Assign) {
-                dispatch(updateIncidentAssignedThunk(incident.incidentId));
-                return;
-            }
-
             dispatch(
                 updateIncidentStatusThunk({
                     id: incident.incidentId,
@@ -78,33 +77,15 @@ export const IncidentAdminTable: React.FC = () => {
         [dispatch]
     );
 
-    // const handlePriorityChange = useCallback(
-    //     (incident: Incident, nextPriority: IncidentPriority) => {
-    //         const current = incident.priority;
-    //         if (nextPriority === current) return;
-    //
-    //         dispatch(
-    //             updateIncidentPriorityThunk({
-    //                 id: incident.incidentId,
-    //                 updates: { priority: nextPriority },
-    //             })
-    //         );
-    //     },
-    //     [dispatch]
-    // );
-
-    const handleClose = useCallback(
+    const handleRequestClose = useCallback(
         (incident: Incident) => {
             if (incident.status === IncidentStatus.Closed) return;
 
-            dispatch(
-                updateIncidentStatusThunk({
-                    id: incident.incidentId,
-                    updates: { status: IncidentStatus.Closed },
-                })
-            );
+            if (requestCloseByIncidentId?.[incident.incidentId]) return;
+
+            dispatch(closeIncidentThunk(incident.incidentId));
         },
-        [dispatch]
+        [dispatch, requestCloseByIncidentId]
     );
 
     const columns = useMemo<ColumnDef<Incident>[]>(
@@ -112,14 +93,48 @@ export const IncidentAdminTable: React.FC = () => {
             {
                 header: "ID",
                 accessorKey: "incidentId",
-                minSize: 200,
-                cell: ({ getValue }) => getValue(),
+                minSize: 220,
+                cell: ({ row }) => {
+                    const incident = row.original;
+                    const closeReq = requestCloseByIncidentId?.[incident.incidentId];
+
+                    return (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <span>{incident.incidentId}</span>
+
+                            {closeReq ? (
+                                <span
+                                    title={`Close request submitted. Auto close at: ${new Date(
+                                        closeReq.autoCloseAt
+                                    ).toLocaleString()}`}
+                                    style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        width: 18,
+                                        height: 18,
+                                        borderRadius: 999,
+                                        border: "1px solid currentColor",
+                                        fontSize: 12,
+                                        lineHeight: 1,
+                                    }}
+                                >
+                  !
+                </span>
+                            ) : null}
+            </span>
+                    );
+                },
             },
             {
                 header: "ID's Ticket",
                 accessorKey: "ticketIds",
                 minSize: 200,
-                cell: ({ getValue }) => getValue(),
+                cell: ({ getValue }) => {
+                    const v = getValue<unknown>();
+                    if (Array.isArray(v)) return v.join(", ");
+                    return (v as string) ?? "—";
+                },
             },
             {
                 header: "Description",
@@ -141,37 +156,11 @@ export const IncidentAdminTable: React.FC = () => {
                     return row.getValue(columnId) === filterValue;
                 },
                 cell: ({ getValue }) => getValue(),
-                // cell: ({ getValue, row }) => {
-                //     const incident = row.original;
-                //     const currentPriority = getValue<IncidentPriority>();
-                //
-                //     return (
-                //         <select
-                //             className="table-select"
-                //             value={currentPriority}
-                //             onClick={(e) => e.stopPropagation()}
-                //             onChange={(e) => {
-                //                 e.stopPropagation();
-                //                 const nextPriority = Number(e.target.value) as IncidentPriority;
-                //                 handlePriorityChange(incident, nextPriority);
-                //             }}
-                //         >
-                //             {PRIORITY_OPTIONS_INCIDENT.map((p) => (
-                //                 <option
-                //                     key={p}
-                //                     value={p}
-                //                 >
-                //                     {p}
-                //                 </option>
-                //             ))}
-                //         </select>
-                //     );
-                // },
             },
             {
                 id: "status",
                 accessorKey: "status",
-                minSize: 200,
+                minSize: 220,
                 filterFn: (row, columnId, filterValue) => {
                     if (!filterValue || filterValue === "ALL") return true;
                     return row.getValue(columnId) === filterValue;
@@ -180,8 +169,8 @@ export const IncidentAdminTable: React.FC = () => {
                     const incident = row.original;
                     const currentIncidentStatus = getValue<IncidentStatus>();
 
-                    if (incident.status === IncidentStatus.Closed) {
-                        return <span>{incident.status.replace("_", " ")}</span>;
+                    if (incident.status !== IncidentStatus.Resolved) {
+                        return <span>{currentIncidentStatus.replace("_", " ")}</span>;
                     }
 
                     return (
@@ -195,14 +184,12 @@ export const IncidentAdminTable: React.FC = () => {
                                 handleStatusChange(incident, next);
                             }}
                         >
-                            {STATUS_OPTIONS_INCIDENT.map((s) => (
-                                <option
-                                    key={s}
-                                    value={s}
-                                >
-                                    {s.replace("_", " ")}
-                                </option>
-                            ))}
+                            <option value={IncidentStatus.Resolved}>
+                                {IncidentStatus.Resolved.replace("_", " ")}
+                            </option>
+                            <option value={IncidentStatus.InProgress}>
+                                {IncidentStatus.InProgress.replace("_", " ")}
+                            </option>
                         </select>
                     );
                 },
@@ -214,21 +201,57 @@ export const IncidentAdminTable: React.FC = () => {
                 minSize: 120,
                 cell: ({ row }) => {
                     const incident = row.original;
+                    const closeReq = requestCloseByIncidentId?.[incident.incidentId];
+                    const alreadyRequested = Boolean(closeReq);
+
                     const disabled =
-                        incident.status === IncidentStatus.Closed;
+                        incident.status === IncidentStatus.Closed || alreadyRequested || isRequestClosed;
+
 
                     return (
-                        <button
-                            className="secondary-btn"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleClose(incident);
-                            }}
-                            disabled={disabled}
-                            title={incident.status === IncidentStatus.Closed ? "Already closed" : "Set status to Closed"}
-                        >
-                            Close incident
-                        </button>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                            <button
+                                className="secondary-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRequestClose(incident);
+                                }}
+                                disabled={disabled}
+                                title={
+                                    incident.status === IncidentStatus.Closed
+                                        ? "Already closed"
+                                        : alreadyRequested
+                                            ? "Close request already submitted"
+                                            : "Send close request to user"
+                                }
+                            >
+                                Request close
+                            </button>
+                            {alreadyRequested ? (
+                                <span
+                                    title={`Close request submitted. Auto close at: ${new Date(
+                                        closeReq!.autoCloseAt
+                                    ).toLocaleString()}`}
+                                    style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 6,
+                                        fontSize: 12,
+                                    }}
+                                >
+                  <span
+                      style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 999,
+                          background: "currentColor",
+                          display: "inline-block",
+                      }}
+                  />
+                  close requested
+                </span>
+                            ) : null}
+                        </div>
                     );
                 },
             },
@@ -249,7 +272,7 @@ export const IncidentAdminTable: React.FC = () => {
             },
 
         ],
-        [handleStatusChange, handleClose]
+        [handleRequestClose, handleStatusChange, isRequestClosed, requestCloseByIncidentId]
     );
 
     return (
@@ -273,7 +296,11 @@ export const IncidentAdminTable: React.FC = () => {
             )}
 
             isRowClickable={() => false}
-            getRowClassName={() => ""}
+            getRowClassName={(row) => {
+                const inc = row.original;
+                const hasCloseRequest = Boolean(requestCloseByIncidentId?.[inc.incidentId]);
+                return hasCloseRequest ? "incident-close-requested" : "";
+            }}
         />
     );
 };
