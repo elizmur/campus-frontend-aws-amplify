@@ -12,17 +12,32 @@ export function canMoveByRank<T extends string | number>(
     if (c === undefined || n === undefined) return false;
     if (n === c) return false;
 
-    return n > c ;
+    return n > c;
 }
 
-export function isOptionDisabledByRank<T extends string | number>(
-    order: Record<T, number>,
-    current: T,
-    option: T,
+export function isOptionDisabledIncidentStatus(
+    current: IncidentStatus,
+    option: IncidentStatus,
 ) {
+    if (option === current) return false;
+
+    if (option === IncidentStatus.Closed) return true;
+
+    if (!canMoveByRank(INCIDENT_STATUS_ORDER, current, option)) return true;
+
+    const c = INCIDENT_STATUS_ORDER[current];
+    const n = INCIDENT_STATUS_ORDER[option];
+
+    if (c === undefined || n === undefined) return true;
+
+    return n !== c + 1;
+}
+
+export function isOptionDisabledByRank<T extends string | number>(order: Record<T, number>, current: T, option: T,) {
     if (option === current) return false;
     return !canMoveByRank(order, current, option);
 }
+
 export const INCIDENT_STATUS_ORDER: Record<IncidentStatus, number> = {
     [IncidentStatus.New]: 0,
     [IncidentStatus.Assign]: 1,

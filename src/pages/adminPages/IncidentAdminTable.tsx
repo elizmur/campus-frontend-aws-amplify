@@ -93,43 +93,13 @@ export const IncidentAdminTable: React.FC = () => {
             {
                 header: "ID",
                 accessorKey: "incidentId",
-                minSize: 220,
-                cell: ({ row }) => {
-                    const incident = row.original;
-                    const closeReq = requestCloseByIncidentId?.[incident.incidentId];
-
-                    return (
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <span>{incident.incidentId}</span>
-
-                            {closeReq ? (
-                                <span
-                                    title={`Close request submitted. Auto close at: ${new Date(
-                                        closeReq.autoCloseAt
-                                    ).toLocaleString()}`}
-                                    style={{
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        width: 18,
-                                        height: 18,
-                                        borderRadius: 999,
-                                        border: "1px solid currentColor",
-                                        fontSize: 12,
-                                        lineHeight: 1,
-                                    }}
-                                >
-                  !
-                </span>
-                            ) : null}
-            </span>
-                    );
-                },
+                minSize: 200,
+                cell: ({ getValue }) => getValue(),
             },
             {
                 header: "ID's Ticket",
                 accessorKey: "ticketIds",
-                minSize: 200,
+                minSize: 220,
                 cell: ({ getValue }) => {
                     const v = getValue<unknown>();
                     if (Array.isArray(v)) return v.join(", ");
@@ -139,7 +109,7 @@ export const IncidentAdminTable: React.FC = () => {
             {
                 header: "Description",
                 accessorKey: "description",
-                minSize: 400,
+                minSize: 200,
                 cell: ({ getValue }) => {
                     const value = (getValue() ?? "") as string;
                     return value.length > 80 ? value.slice(0, 80) + "…" : value;
@@ -150,7 +120,7 @@ export const IncidentAdminTable: React.FC = () => {
             {
                 id: "priority",
                 accessorKey: "priority",
-                minSize: 200,
+                minSize: 80,
                 filterFn: (row, columnId, filterValue) => {
                     if (!filterValue || filterValue === "ALL") return true;
                     return row.getValue(columnId) === filterValue;
@@ -160,7 +130,7 @@ export const IncidentAdminTable: React.FC = () => {
             {
                 id: "status",
                 accessorKey: "status",
-                minSize: 220,
+                minSize: 150,
                 filterFn: (row, columnId, filterValue) => {
                     if (!filterValue || filterValue === "ALL") return true;
                     return row.getValue(columnId) === filterValue;
@@ -198,58 +168,32 @@ export const IncidentAdminTable: React.FC = () => {
             {
                 id: "adminAction",
                 header: "Close",
-                minSize: 120,
+                minSize: 180,
                 cell: ({ row }) => {
                     const incident = row.original;
+
                     const closeReq = requestCloseByIncidentId?.[incident.incidentId];
                     const alreadyRequested = Boolean(closeReq);
 
-                    const disabled =
-                        incident.status === IncidentStatus.Closed || alreadyRequested || isRequestClosed;
-
+                    const canRequestClose =
+                        incident.status === IncidentStatus.Resolved &&
+                        !alreadyRequested &&
+                        !isRequestClosed;
 
                     return (
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-                            <button
-                                className="secondary-btn"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRequestClose(incident);
-                                }}
-                                disabled={disabled}
-                                title={
-                                    incident.status === IncidentStatus.Closed
-                                        ? "Already closed"
-                                        : alreadyRequested
-                                            ? "Close request already submitted"
-                                            : "Send close request to user"
-                                }
-                            >
-                                Request close
-                            </button>
-                            {alreadyRequested ? (
-                                <span
-                                    title={`Close request submitted. Auto close at: ${new Date(
-                                        closeReq!.autoCloseAt
-                                    ).toLocaleString()}`}
-                                    style={{
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: 6,
-                                        fontSize: 12,
+                            {canRequestClose ? (
+                                <button
+                                    className="secondary-btn"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRequestClose(incident);
                                     }}
+                                    disabled={isRequestClosed}
+                                    title="Send close request to user"
                                 >
-                  <span
-                      style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 999,
-                          background: "currentColor",
-                          display: "inline-block",
-                      }}
-                  />
-                  close requested
-                </span>
+                                    Request close
+                                </button>
                             ) : null}
                         </div>
                     );

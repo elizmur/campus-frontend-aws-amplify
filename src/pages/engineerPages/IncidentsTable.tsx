@@ -13,7 +13,7 @@ import {
     canMoveByRank,
     INCIDENT_PRIORITY_ORDER,
     INCIDENT_STATUS_ORDER,
-    isOptionDisabledByRank
+    isOptionDisabledByRank, isOptionDisabledIncidentStatus
 } from "../../utils/helper.ts";
 import {useLocation, useNavigate} from "react-router-dom";
 import {usePolling} from "../../hooks/usePolling.ts";
@@ -64,10 +64,16 @@ const IncidentTable:React.FC = () => {
     const handleStatusChange = useCallback(
         (incident: Incident, nextStatus: IncidentStatus) => {
             const current = incident.status;
-
             if (nextStatus === current) return;
 
-            if (!canMoveByRank(INCIDENT_STATUS_ORDER, incident.status, nextStatus)) return;
+            if (nextStatus === IncidentStatus.Closed) return;
+
+            if (!canMoveByRank(INCIDENT_STATUS_ORDER, current, nextStatus)) return;
+
+            const c = INCIDENT_STATUS_ORDER[current];
+            const n = INCIDENT_STATUS_ORDER[nextStatus];
+            if (c === undefined || n === undefined) return;
+            if (n !== c + 1) return;
 
             if (nextStatus === IncidentStatus.Assign) {
                 dispatch(updateIncidentAssignedThunk(incident.incidentId));
@@ -191,11 +197,7 @@ const IncidentTable:React.FC = () => {
                                 <option
                                     key={s}
                                     value={s}
-                                    disabled={isOptionDisabledByRank(
-                                        INCIDENT_STATUS_ORDER,
-                                        incident.status,
-                                        s,
-                                    )}
+                                    disabled={isOptionDisabledIncidentStatus(incident.status, s)}
                                 >
                                     {s.replace("_", " ")}
                                 </option>
