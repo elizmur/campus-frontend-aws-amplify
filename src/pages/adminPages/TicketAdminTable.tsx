@@ -1,7 +1,7 @@
-import React, {useCallback, useEffect, useMemo} from "react";
+import React, {useEffect, useMemo} from "react";
 import {TicketStatus, type Ticket} from "../../types/ticketTypes.ts";
 import {useAppDispatch, useAppSelector} from "../../state/hooks.ts";
-import {fetchTicketsThunk, updateTicketThunk} from "../../state/slices/ticketSlice.ts";
+import {fetchTicketsThunk} from "../../state/slices/ticketSlice.ts";
 import type {ColumnDef} from "@tanstack/react-table";
 import TableTanStack from "../../components/TableTanStack.tsx";
 import {TableFilters} from "../../components/TableFilters.tsx";
@@ -17,19 +17,19 @@ const TicketAdminTable: React.FC = () => {
     const { items } = useAppSelector((state) => state.ticket);
     const dispatch = useAppDispatch();
 
-    const closeTicket = useCallback(
-        (ticket: Ticket) => {
-            if (ticket.status === TicketStatus.Rejected) return;
-
-            dispatch(
-                updateTicketThunk({
-                    id: ticket.requestId,
-                    updates: { status: TicketStatus.Done },
-                })
-            );
-        },
-        [dispatch]
-    );
+    // const closeTicket = useCallback(
+    //     (ticket: Ticket) => {
+    //         if (ticket.status === TicketStatus.Rejected) return;
+    //
+    //         dispatch(
+    //             updateTicketThunk({
+    //                 id: ticket.requestId,
+    //                 updates: { status: TicketStatus.Done },
+    //             })
+    //         );
+    //     },
+    //     [dispatch]
+    // );
 
     useEffect(() => {
         dispatch(fetchTicketsThunk());
@@ -73,40 +73,40 @@ const TicketAdminTable: React.FC = () => {
                 },
             },
 
-            {
-                id: "adminActions",
-                header: "Close",
-                minSize: 160,
-                cell: ({ row }) => {
-                    const ticket = row.original;
-
-                    const disabled =
-                        ticket.status === TicketStatus.Rejected ||
-                        ticket.status === TicketStatus.Done;
-
-                    const title =
-                        ticket.status === TicketStatus.Rejected
-                            ? "Rejected tickets cannot be closed"
-                            : ticket.status === TicketStatus.Done
-                                ? "Ticket already closed"
-                                : "Close ticket";
-
-                    return (
-                        <button
-                            className="secondary-btn table-btn"
-                            disabled={disabled}
-                            title={title}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                closeTicket(ticket);
-                            }}
-                        >
-                            Close
-                        </button>
-                    );
-                },
-            },
+            // {
+            //     id: "adminActions",
+            //     header: "Close",
+            //     minSize: 160,
+            //     cell: ({ row }) => {
+            //         const ticket = row.original;
+            //
+            //         const disabled =
+            //             ticket.status === TicketStatus.Rejected ||
+            //             ticket.status === TicketStatus.Done;
+            //
+            //         const title =
+            //             ticket.status === TicketStatus.Rejected
+            //                 ? "Rejected tickets cannot be closed"
+            //                 : ticket.status === TicketStatus.Done
+            //                     ? "Ticket already closed"
+            //                     : "Close ticket";
+            //
+            //         return (
+            //             <button
+            //                 className="secondary-btn table-btn"
+            //                 disabled={disabled}
+            //                 title={title}
+            //                 onClick={(e) => {
+            //                     e.preventDefault();
+            //                     e.stopPropagation();
+            //                     closeTicket(ticket);
+            //                 }}
+            //             >
+            //                 Close
+            //             </button>
+            //         );
+            //     },
+            // },
 
             {
                 header: "Created at",
@@ -129,7 +129,7 @@ const TicketAdminTable: React.FC = () => {
         ];
 
         return cols;
-    }, [closeTicket]);
+    }, []);
 
     return (
         <TableTanStack<Ticket>

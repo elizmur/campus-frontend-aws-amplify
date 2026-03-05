@@ -248,36 +248,6 @@ export const IncidentAdminTable: React.FC = () => {
                 },
             },
 
-            // {
-            //     header: "Comments",
-            //     accessorKey: "comments",
-            //     minSize: 400,
-            //     cell: ({ row }) => {
-            //         const comments = row.original.comments ?? [];
-            //
-            //         if (!comments.length) {
-            //             return <span className="muted-text">No comments</span>;
-            //         }
-            //
-            //         return (
-            //             <div className="comment-list">
-            //                 {comments.map((c) => (
-            //                     <div key={c.commentId} className="comment-item">
-            //                         <div className="comment-text">{c.commentText}</div>
-            //
-            //                         <div className="comment-meta">
-            //                             {c.createdBy} •{" "}
-            //                             {c.createdAt
-            //                                 ? new Date(c.createdAt).toLocaleString()
-            //                                 : "—"}
-            //                         </div>
-            //                     </div>
-            //                 ))}
-            //             </div>
-            //         );
-            //     },
-            // }
-
         ],
         [handleStatusChange, handleClose]
     );

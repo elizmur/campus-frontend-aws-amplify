@@ -63,4 +63,10 @@ export type UpdateIncidentRequest = {
     category?: string;
     updatedBy: string;
 };
+export type IncidentSubmitResponse = {
+    "message": string;
+    "incidentId": string;
+    "autoCloseAt": string;
+    "userNotified": boolean;
+}
 

@@ -3,12 +3,12 @@ import {
     type CommentIncident,
     type CreateIncidentRequest,
     type Incident,
-    IncidentStatus
+    IncidentStatus, type IncidentSubmitResponse
 } from "../../types/incidentTypes.ts";
 import {createSlice} from "@reduxjs/toolkit";
 import ApiError, {INCIDENT_ERROR_MESSAGES} from "../../utils/ApiError.ts";
 import {
-    addIncidentCommentApi,
+    addIncidentCommentApi, closeIncidentApi,
     createIncidentApi,
     getIncidentApi, getIncidentByIdApi, updateIncidentPriorityApi,
     updateIncidentStatusApi,
@@ -86,7 +86,7 @@ export const getIncidentsThunk = createAsyncThunk<
     "getIncidents",
     async (_, {rejectWithValue}) => {
         try{
-            return getIncidentApi();
+            return await getIncidentApi();
         } catch (e) {
             if (e instanceof ApiError) {
                 return rejectWithValue(e.code || "SERVER_ERROR");
@@ -167,7 +167,23 @@ export const addIncidentCommentThunk = createAsyncThunk<
         }
     }
 );
-
+export const closeIncidentThunk = createAsyncThunk<
+    IncidentSubmitResponse,
+    string,
+    { rejectValue: string }
+>(
+    "incident/requestClose",
+    async (id, { rejectWithValue }) => {
+        try {
+            return await closeIncidentApi(id);
+        } catch (e) {
+            if (e instanceof ApiError) {
+                return rejectWithValue(e.code || "SERVER_ERROR");
+            }
+            return rejectWithValue(INCIDENT_ERROR_MESSAGES.UNKNOWN);
+        }
+    }
+);
 
 export interface IncidentState {
     incidents: Incident[];
@@ -187,8 +203,12 @@ export interface IncidentState {
     incidentsSyncError: string | null;
     incidentsNewCount: number;
 
-    addingCommentByIncidentId: Record<string, boolean>
-    addCommentErrorByIncidentId: Record<string, string | null>
+    addingCommentByIncidentId: Record<string, boolean>;
+    addCommentErrorByIncidentId: Record<string, string | null>;
+
+    isRequestClosed: boolean;
+    requestCloseError: string | null;
+    requestCloseByIncidentId: Record<string, IncidentSubmitResponse>;
 }
 const initialState: IncidentState = {
     incidents: [],
@@ -209,9 +229,12 @@ const initialState: IncidentState = {
     incidentsNewCount: 0,
 
     addingCommentByIncidentId: {},
-    addCommentErrorByIncidentId: {}
-}
+    addCommentErrorByIncidentId: {},
 
+    isRequestClosed: false,
+    requestCloseError: null,
+    requestCloseByIncidentId: {},
+}
 
 const incidentSlice = createSlice({
     name: "incident",
@@ -347,7 +370,24 @@ const incidentSlice = createSlice({
                 state.addingCommentByIncidentId[id] = false;
                 state.addCommentErrorByIncidentId[id] =
                     action.payload || INCIDENT_ERROR_MESSAGES.UNKNOWN;
-            });
+            })
+
+            .addCase(closeIncidentThunk.pending, (state) => {
+                state.isRequestClosed = true;
+                state.requestCloseError = null;
+            })
+            .addCase(closeIncidentThunk.fulfilled, (state, action) => {
+                state.isRequestClosed = false;
+                const resp = action.payload;
+
+                state.requestCloseByIncidentId[resp.incidentId] = resp;
+            })
+            .addCase(closeIncidentThunk.rejected, (state, action) => {
+                state.isCreatingInc = false;
+                state.errorInc = mapIncidentErrorCodeToMessage(
+                    action.payload ?? action.error.message
+                );
+            })
 
     }
 });

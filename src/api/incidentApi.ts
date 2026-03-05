@@ -2,7 +2,7 @@ import {
     type CommentIncident,
     type CreateIncidentRequest,
     type Incident,
-    type IncidentResponse,
+    type IncidentResponse, type IncidentSubmitResponse,
 } from "../types/incidentTypes.ts";
 import {request} from "./client.ts";
 
@@ -47,3 +47,8 @@ export const addIncidentCommentApi = async (id: string, body: { text: string }):
         body,
     });
 };
+export const closeIncidentApi = async (id: string): Promise<IncidentSubmitResponse> => {
+    return request<IncidentSubmitResponse>(`/incidents/${id}/request-close`, {
+        method: "POST",
+    })
+}
